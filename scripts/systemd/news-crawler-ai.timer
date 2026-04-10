@@ -1,0 +1,12 @@
+[Unit]
+Description=Run News Crawler AI every 15 minutes
+
+[Timer]
+OnBootSec=2min
+OnUnitActiveSec=15min
+RandomizedDelaySec=1min
+Unit=news-crawler-ai.service
+Persistent=true
+
+[Install]
+WantedBy=timers.target

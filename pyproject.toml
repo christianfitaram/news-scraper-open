@@ -1,0 +1,92 @@
+[tool.poetry]
+name = "news-crawler-ai"
+version = "0.1.0"
+description = "Automated news scraping, classification and enrichment pipeline"
+authors = ["Christian Fita <christianfitaramirez@gmail.com>"]
+readme = "README.md"
+license = "MIT"
+packages = [
+  { include = "news_crawler" },
+  { include = "scripts" },
+]
+
+[tool.poetry.dependencies]
+python = ">=3.10,<3.13"
+httpx = ">=0.24.0"
+trafilatura = "~=2.0.0"
+beautifulsoup4 = "~=4.13.5"
+lxml = ">=4.9.0"
+lxml-html-clean = ">=0.1.0"
+feedparser = "~=6.0.12"
+typer = ">=0.9.0"
+rich = ">=13.0.0"
+tqdm = ">=4.65.0"
+python-dotenv = "~=1.1.1"
+pymongo = "~=4.15.0"
+numpy = ">=1.23,<2.0"
+transformers = ">=4.49,<4.50"
+torch = "2.2.2"
+safetensors = "0.4.3"
+selenium = "4.27.1"
+webdriver-manager = "4.0.2"
+urllib3 = {version = "2.4.0", extras = ["socks"]}
+requests = "~=2.32.5"
+typing-extensions = "4.12.2"
+websocket-client = "1.8.0"
+google-genai = ">=1.56.0"
+spacy = {version = "3.7.2", extras = ["transformers"]}
+en-core-web-trf = {url = "https://github.com/explosion/spacy-models/releases/download/en_core_web_trf-3.7.2/en_core_web_trf-3.7.2-py3-none-any.whl"}
+click = "8.1.7"
+
+[tool.poetry.group.dev.dependencies]
+pytest = ">=7.4.0"
+pytest-cov = ">=4.1.0"
+pytest-mock = ">=3.11.0"
+black = ">=23.0.0"
+ruff = ">=0.1.0"
+mypy = ">=1.7.0"
+ipython = ">=8.0.0"
+
+[tool.poetry.scripts]
+news-crawler = "news_crawler.cli:main"
+news-crawler-bootstrap = "scripts.bootstrap_models:main"
+news-crawler-bootstrap-indexes = "scripts.bootstrap_indexes:main"
+news-crawler-dedupe-articles = "scripts.dedupe_articles_by_url:main"
+
+[build-system]
+requires = ["poetry-core>=1.0.0"]
+build-backend = "poetry.core.masonry.api"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+python_files = ["test_*.py"]
+python_classes = ["Test*"]
+python_functions = ["test_*"]
+addopts = "-v --cov=news_crawler --cov-report=html --cov-report=term"
+
+[tool.black]
+line-length = 100
+target-version = ["py310"]
+include = "\\.pyi?$"
+extend-exclude = '''
+/(
+  \.eggs
+  | \.git
+  | \.venv
+  | build
+  | dist
+)/
+'''
+
+[tool.ruff]
+line-length = 100
+target-version = "py310"
+select = ["E", "F", "W", "I", "N"]
+ignore = ["E501"]
+
+[tool.mypy]
+python_version = "3.10"
+warn_return_any = true
+warn_unused_configs = true
+disallow_untyped_defs = false
+ignore_missing_imports = true

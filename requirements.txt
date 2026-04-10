@@ -1,0 +1,42 @@
+# Core scraping
+httpx
+trafilatura~=2.0.0
+beautifulsoup4~=4.13.5
+lxml
+lxml_html_clean
+# CLI & logging
+typer
+rich
+tqdm
+python-dotenv~=1.1.1
+
+# Databases (keep the ones you use)
+pymongo~=4.15.0
+# psycopg2-binary   # uncomment if you also write to Postgres/pgvector
+
+# Numeric stack
+numpy>=1.23,<2.0
+
+# NLP / ML
+transformers>=4.49,<4.50
+
+# PyTorch (CPU wheel from the official index to avoid CUDA deps/backtracking)
+--extra-index-url https://download.pytorch.org/whl/cpu
+torch==2.2.2
+
+# accelerate
+# sentencepiece
+safetensors==0.4.3
+requests~=2.32.5
+feedparser~=6.0.12
+selenium==4.27.1
+webdriver-manager==4.0.2
+urllib3[socks]==2.4.0
+typing-extensions==4.12.2
+websocket-client==1.8.0
+google-genai>=1.56.0
+
+
+# Others
+spacy[transformers]==3.7.2
+en-core-web-trf @ https://github.com/explosion/spacy-models/releases/download/en_core_web_trf-3.7.2/en_core_web_trf-3.7.2-py3-none-any.whl

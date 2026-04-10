@@ -1,0 +1,20 @@
+[Unit]
+Description=News Crawler AI pipeline
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=news-crawler
+WorkingDirectory=/opt/news-crawler-ai
+Environment=CHROME_BIN=/snap/bin/chromium
+Environment=CHROMEDRIVER_PATH=/usr/local/bin/chromedriver
+EnvironmentFile=/opt/news-crawler-ai/.env
+ExecStart=/opt/news-crawler-ai/.venv/bin/python /opt/news-crawler-ai/main.py run
+Restart=on-failure
+RestartSec=30
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target
