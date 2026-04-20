@@ -3,7 +3,7 @@
 [![CI](https://github.com/christianfitaram/news-scraper-open/actions/workflows/ci.yml/badge.svg)](https://github.com/christianfitaram/news-scraper-open/actions/workflows/ci.yml)
 ![Python](https://img.shields.io/badge/python-3.10%20--%203.12-blue)
 [![License](https://img.shields.io/github/license/christianfitaram/news-scraper-open)](LICENSE)
-![Coverage](https://img.shields.io/badge/coverage-49%25-yellow)
+![Coverage](https://img.shields.io/badge/coverage-60%25-yellowgreen)
 
 News Scraper Open is an open-source version of a production news ingestion and enrichment pipeline, focused on reliable scraping, LLM-assisted enrichment, provider fallback, deduplication, and MongoDB persistence.
 
