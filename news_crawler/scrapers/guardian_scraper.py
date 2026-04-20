@@ -1,7 +1,7 @@
 """The Guardian RSS scraper."""
 from __future__ import annotations
 
-from typing import Iterator, Dict, Any
+from typing import Any, Dict, Iterator
 
 from news_crawler.scrapers.base_scraper import BaseScraper
 from news_crawler.scrapers.streams import scrape_guardian_stream

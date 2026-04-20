@@ -1,1 +1,1 @@
-"""News Crawler AI package."""
+"""News Scraper Open package."""

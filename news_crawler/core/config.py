@@ -14,6 +14,13 @@ def _env_truthy(name: str, default: str = "0") -> bool:
     return os.getenv(name, default).strip() in {"1", "true", "True", "yes", "YES"}
 
 
+def _env_backend(name: str, default: str = "local") -> str:
+    value = os.getenv(name, default).strip().lower()
+    if value in {"gemini", "genai", "google"}:
+        return "gemini"
+    return "local"
+
+
 @dataclass(frozen=True)
 class MongoConfig:
     """MongoDB configuration."""
@@ -70,6 +77,8 @@ class WebhookConfig:
     signature: str = ""
     timeout: int = 60
     max_retries: int = 3
+    async_workers: int = 2
+    drain_timeout_seconds: int = 20
 
     @classmethod
     def from_env(cls) -> "WebhookConfig":
@@ -79,6 +88,8 @@ class WebhookConfig:
             signature=os.getenv("WEBHOOK_SIGNATURE", ""),
             timeout=int(os.getenv("WEBHOOK_TIMEOUT", "60")),
             max_retries=int(os.getenv("WEBHOOK_MAX_RETRIES", "3")),
+            async_workers=max(1, int(os.getenv("WEBHOOK_ASYNC_WORKERS", "2"))),
+            drain_timeout_seconds=max(0, int(os.getenv("WEBHOOK_DRAIN_TIMEOUT_SECONDS", "20"))),
         )
 
 
@@ -116,7 +127,7 @@ class SeleniumConfig:
 class AppConfig:
     """General application configuration."""
 
-    app_name: str = "news-crawler-ai"
+    app_name: str = "news-scraper-open"
     log_level: str = "INFO"
     hf_home: str = "./models/transformers"
     enable_webhooks: bool = True
@@ -124,11 +135,16 @@ class AppConfig:
     news_fetch_timeout: int = 20
     state_file: str = "crawler_state.json"
     enable_ollama: bool = True
+    nlp_backend: str = "local"
+    summarizer_backend: str = "local"
+    sentiment_backend: str = "local"
+    topic_backend: str = "local"
 
     @classmethod
     def from_env(cls) -> "AppConfig":
+        nlp_backend = _env_backend("NLP_BACKEND", "local")
         return cls(
-            app_name=os.getenv("APP_NAME", "news-crawler-ai"),
+            app_name=os.getenv("APP_NAME", "news-scraper-open"),
             log_level=os.getenv("LOG_LEVEL", "INFO"),
             hf_home=os.getenv("HF_HOME", "./models/transformers"),
             enable_webhooks=_env_truthy("ENABLE_WEBHOOKS", "1"),
@@ -136,22 +152,26 @@ class AppConfig:
             news_fetch_timeout=int(os.getenv("NEWS_FETCH_TIMEOUT", "20")),
             state_file=os.getenv("STATE_FILE", "crawler_state.json"),
             enable_ollama=_env_truthy("ENABLE_OLLAMA", "1"),
+            nlp_backend=nlp_backend,
+            summarizer_backend=_env_backend("SUMMARIZER_BACKEND", nlp_backend),
+            sentiment_backend=_env_backend("SENTIMENT_BACKEND", nlp_backend),
+            topic_backend=_env_backend("TOPIC_BACKEND", nlp_backend),
         )
-    
+
 @dataclass(frozen=True)
 class OllamaConfig:
     """Ollama configuration."""
 
     host: str = "localhost"
     port: int = 11434
-    model: str = "news-crawler-ollama"
+    model: str = "gpt-oss:20b-cloud"
 
     @classmethod
     def from_env(cls) -> "OllamaConfig":
         return cls(
             host=os.getenv("OLLAMA_HOST", "localhost"),
             port=int(os.getenv("OLLAMA_PORT", "11434")),
-            model=os.getenv("OLLAMA_MODEL", "news-crawler-ollama"),
+            model=os.getenv("OLLAMA_MODEL", "gpt-oss:20b-cloud"),
         )
 
 

@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import logging
 import uuid
+from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime, timezone
 from typing import Any, Dict, Optional
 
@@ -32,6 +33,7 @@ class PipelineOrchestrator:
 
         require_genai = APP_CONFIG.enable_genai and not APP_CONFIG.enable_ollama and not dry_run
         validate_config(require_db=not dry_run, require_genai=require_genai)
+        self._analysis_executor = ThreadPoolExecutor(max_workers=2, thread_name_prefix="article-nlp")
 
         self.articles_repo = None
         self.link_pool_repo = None
@@ -118,6 +120,10 @@ class PipelineOrchestrator:
         except Exception as exc:
             logger.error("Pipeline run failed: %s", exc, exc_info=True)
             raise
+        finally:
+            if self.webhook:
+                self.webhook.close()
+            self._analysis_executor.shutdown(wait=True, cancel_futures=False)
 
     def _process_article(self, article: Dict[str, Any], batch_id: str) -> Dict[str, str]:
         url = article.get("url", "")
@@ -146,9 +152,13 @@ class PipelineOrchestrator:
             article["locations"] = cleaned_data.get("locations", [])
             article["organizations"] = cleaned_data.get("organizations", [])
             article["persons"] = cleaned_data.get("persons", [])
+            self._merge_llm_models(article, cleaned_data.get("llm_models"))
 
-        article["summary"] = smart_summarize(article.get("text", ""))
-        article.update(classify_article(article.get("text", "")))
+        text = article.get("text", "")
+        nlp_data = self._analyze_text(text)
+        article["summary"] = nlp_data["summary"]
+        article.update(nlp_data["classification"])
+        self._merge_llm_models(article, nlp_data.get("llm_models"))
 
         if not self.dry_run and self.articles_repo and self.link_pool_repo:
             article["sample"] = batch_id
@@ -179,6 +189,79 @@ class PipelineOrchestrator:
 
         logger.info("Processed: %s", str(article.get("title", "Untitled")))
         return {"status": "success"}
+
+    @staticmethod
+    def _merge_llm_models(article: Dict[str, Any], llm_models: Any) -> None:
+        if not isinstance(llm_models, dict):
+            return
+        target = article.setdefault("llm_models", {})
+        if not isinstance(target, dict):
+            target = {}
+            article["llm_models"] = target
+        for step, models in llm_models.items():
+            if not models:
+                continue
+            target[step] = models
+
+    @staticmethod
+    def _summarize_with_metadata(text: str) -> Any:
+        try:
+            return smart_summarize(text, return_metadata=True)
+        except TypeError as exc:
+            if "return_metadata" not in str(exc):
+                raise
+            return smart_summarize(text)
+
+    @staticmethod
+    def _classify_with_metadata(text: str) -> Any:
+        try:
+            return classify_article(text, return_metadata=True)
+        except TypeError as exc:
+            if "return_metadata" not in str(exc):
+                raise
+            return classify_article(text)
+
+    def _analyze_text(self, text: str) -> Dict[str, Any]:
+        default_summary = text.strip() if isinstance(text, str) else ""
+        default_classification: Dict[str, Any] = {
+            "sentiment": {"label": "NEUTRAL", "score": 0.0},
+            "topic": "other",
+        }
+        llm_models: Dict[str, Any] = {}
+
+        futures = {
+            "summary": self._analysis_executor.submit(self._summarize_with_metadata, text),
+            "classification": self._analysis_executor.submit(self._classify_with_metadata, text),
+        }
+        summary = default_summary
+        classification = default_classification
+
+        for name, future in futures.items():
+            try:
+                result = future.result()
+                if name == "summary":
+                    if isinstance(result, tuple) and len(result) == 2:
+                        result, metadata = result
+                        if isinstance(metadata, dict):
+                            llm_models.update(metadata)
+                    summary = str(result or "").strip()
+                elif name == "classification":
+                    if isinstance(result, tuple) and len(result) == 2:
+                        result, metadata = result
+                        if isinstance(metadata, dict):
+                            llm_models.update(metadata)
+                    if isinstance(result, dict):
+                        classification = result
+                elif isinstance(result, dict):
+                    classification = result
+            except Exception as exc:
+                logger.warning("Failed to compute %s for article text: %s", name, exc)
+
+        return {
+            "summary": summary or default_summary,
+            "classification": classification,
+            "llm_models": llm_models,
+        }
 
     def _save_batch_metadata(self, batch_id: str, stats: Dict[str, Any]) -> None:
         if not self.metadata_repo:

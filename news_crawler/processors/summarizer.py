@@ -5,6 +5,7 @@ import logging
 import re
 from typing import Any
 
+from news_crawler.core.config import APP_CONFIG
 from news_crawler.processors._hf_common import resolve_cache_dir, select_torch_device
 
 logger = logging.getLogger(__name__)
@@ -154,12 +155,29 @@ def _get_runtime() -> _SummarizerRuntime:
     return _runtime
 
 
-def smart_summarize(text: str, device: str | int = "auto") -> str:
+def smart_summarize(
+    text: str,
+    device: str | int = "auto",
+    return_metadata: bool = False,
+) -> str | tuple[str, dict[str, Any]]:
     """Summarize text with robust fallbacks."""
     if not text:
-        return ""
+        return ("", {}) if return_metadata else ""
+    if APP_CONFIG.summarizer_backend == "gemini":
+        try:
+            from news_crawler.processors.gemini_nlp import get_runtime
+
+            runtime = get_runtime()
+            if return_metadata and hasattr(runtime, "summarize_with_metadata"):
+                summary, models = runtime.summarize_with_metadata(text)
+                return summary, {"summary": models}
+            summary = runtime.summarize(text)
+            return (summary, {}) if return_metadata else summary
+        except Exception as exc:
+            logger.warning("Gemini summarization failed, falling back to local model: %s", exc)
     try:
-        return _get_runtime().summarize(text, preferred_device=device)
+        summary = _get_runtime().summarize(text, preferred_device=device)
+        return (summary, {}) if return_metadata else summary
     except Exception as exc:
         logger.error("Summarization failed: %s", exc)
-        return text
+        return (text, {}) if return_metadata else text

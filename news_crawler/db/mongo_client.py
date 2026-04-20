@@ -21,7 +21,7 @@ def get_client() -> MongoClient:
             raise RuntimeError("MONGO_URI is required to create a MongoDB client")
         _client = MongoClient(
             MONGO_CONFIG.uri,
-            appname="news-crawler-ai",
+            appname="news-scraper-open",
             serverSelectionTimeoutMS=8000,
         )
     return _client

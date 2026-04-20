@@ -31,14 +31,58 @@ def dedupe_preserve_first(values: Iterable[str]) -> List[str]:
     return items
 
 
-def normalize_entity_lists(payload: Dict[str, Any]) -> Dict[str, List[str]]:
-    normalized: Dict[str, List[str]] = {}
-    for key in ("locations", "organizations", "persons"):
+def _values_from_key(payload: Dict[str, Any], keys: Iterable[str]) -> List[str]:
+    values: List[str] = []
+    for key in keys:
         value = payload.get(key, [])
+        if isinstance(value, str):
+            values.append(value)
+            continue
         if not isinstance(value, list):
-            value = []
-        normalized[key] = dedupe_preserve_first(item for item in value if isinstance(item, str))
-    return normalized
+            continue
+        for item in value:
+            if isinstance(item, str):
+                values.append(item)
+            elif isinstance(item, dict):
+                name = item.get("name") or item.get("text") or item.get("entity")
+                if isinstance(name, str):
+                    values.append(name)
+    return values
+
+
+def _flatten_nested_entities(payload: Dict[str, Any]) -> Dict[str, Any]:
+    nested = payload.get("entities")
+    if isinstance(nested, dict):
+        merged = dict(payload)
+        merged.update(nested)
+        return merged
+    return payload
+
+
+def normalize_entity_lists(payload: Dict[str, Any]) -> Dict[str, List[str]]:
+    payload = _flatten_nested_entities(payload)
+    return {
+        "locations": dedupe_preserve_first(
+            _values_from_key(payload, ("locations", "places", "place_names", "geopolitical_entities", "gpe"))
+        ),
+        "organizations": dedupe_preserve_first(
+            _values_from_key(
+                payload,
+                (
+                    "organizations",
+                    "organisations",
+                    "companies",
+                    "company_names",
+                    "institutions",
+                    "agencies",
+                    "orgs",
+                ),
+            )
+        ),
+        "persons": dedupe_preserve_first(
+            _values_from_key(payload, ("persons", "people", "person_names", "people_names", "names"))
+        ),
+    }
 
 
 def chunk_text(text: str, max_chars: int) -> List[str]:

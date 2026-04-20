@@ -1,16 +1,16 @@
 [Unit]
-Description=News Crawler AI pipeline
+Description=News Scraper Open pipeline
 After=network-online.target
 Wants=network-online.target
 
 [Service]
 Type=simple
-User=news-crawler
-WorkingDirectory=/opt/news-crawler-ai
+User=news-scraper
+WorkingDirectory=/opt/news-scraper-open
 Environment=CHROME_BIN=/snap/bin/chromium
 Environment=CHROMEDRIVER_PATH=/usr/local/bin/chromedriver
-EnvironmentFile=/opt/news-crawler-ai/.env
-ExecStart=/opt/news-crawler-ai/.venv/bin/python /opt/news-crawler-ai/main.py run
+EnvironmentFile=/opt/news-scraper-open/.env
+ExecStart=/opt/news-scraper-open/.venv/bin/python /opt/news-scraper-open/main.py run
 Restart=on-failure
 RestartSec=30
 StandardOutput=journal

@@ -1,6 +1,6 @@
 # Contributing
 
-Thanks for contributing to NewsFeeder-IA.
+Thanks for contributing to News Scraper Open.
 
 ## Scope
 

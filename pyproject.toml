@@ -1,7 +1,7 @@
 [tool.poetry]
-name = "news-crawler-ai"
+name = "news-scraper-open"
 version = "0.1.0"
-description = "Automated news scraping, classification and enrichment pipeline"
+description = "Open-source news ingestion and enrichment pipeline with LLM fallback and MongoDB persistence"
 authors = ["Christian Fita <christianfitaramirez@gmail.com>"]
 readme = "README.md"
 license = "MIT"
@@ -48,10 +48,10 @@ mypy = ">=1.7.0"
 ipython = ">=8.0.0"
 
 [tool.poetry.scripts]
-news-crawler = "news_crawler.cli:main"
-news-crawler-bootstrap = "scripts.bootstrap_models:main"
-news-crawler-bootstrap-indexes = "scripts.bootstrap_indexes:main"
-news-crawler-dedupe-articles = "scripts.dedupe_articles_by_url:main"
+news-scraper = "news_crawler.cli:main"
+news-scraper-bootstrap = "scripts.bootstrap_models:main"
+news-scraper-bootstrap-indexes = "scripts.bootstrap_indexes:main"
+news-scraper-dedupe-articles = "scripts.dedupe_articles_by_url:main"
 
 [build-system]
 requires = ["poetry-core>=1.0.0"]
@@ -81,6 +81,8 @@ extend-exclude = '''
 [tool.ruff]
 line-length = 100
 target-version = "py310"
+
+[tool.ruff.lint]
 select = ["E", "F", "W", "I", "N"]
 ignore = ["E501"]
 

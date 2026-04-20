@@ -1,7 +1,7 @@
 """Repository for link_pool collection."""
 from __future__ import annotations
 
-from typing import Any, ClassVar, Dict, Optional, List, Tuple
+from typing import Any, ClassVar, Dict, List, Optional, Tuple
 
 from pymongo import ASCENDING, ReturnDocument
 from pymongo.collection import Collection

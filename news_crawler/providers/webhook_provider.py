@@ -7,7 +7,9 @@ import json
 import logging
 import time
 from datetime import datetime
-from typing import Any, Dict
+from queue import Queue
+from threading import Lock, Thread
+from typing import Any, Dict, Optional, Tuple
 
 import requests
 
@@ -17,11 +19,21 @@ logger = logging.getLogger(__name__)
 
 
 class WebhookProvider:
-    """Send webhooks with HMAC signature and retry backoff."""
+    """Queue and dispatch webhooks asynchronously with retry backoff."""
 
     def __init__(self) -> None:
         self.config = WEBHOOK_CONFIG
-        logger.info("WebhookProvider initialized")
+        self._queue: Queue[Optional[Tuple[str, Dict[str, Any], str]]] = Queue()
+        self._workers: list[Thread] = []
+        self._closed = False
+        self._closed_lock = Lock()
+
+        for idx in range(max(1, self.config.async_workers)):
+            worker = Thread(target=self._worker_loop, name=f"webhook-outbox-{idx}", daemon=True)
+            worker.start()
+            self._workers.append(worker)
+
+        logger.info("WebhookProvider initialized (async_workers=%s)", len(self._workers))
 
     def send_article_webhooks(self, article_id: str, article: Dict[str, Any]) -> None:
         scraped_at = self._serialize_scraped_at(article.get("scraped_at"))
@@ -36,7 +48,7 @@ class WebhookProvider:
                 "sentiment": article.get("sentiment", {}),
                 "scraped_at": scraped_at,
             }
-            self._send_webhook(self.config.embedding_url, payload, "embedding")
+            self._enqueue_webhook(self.config.embedding_url, payload, "embedding")
 
         if self.config.thread_events_url:
             payload = {
@@ -44,7 +56,59 @@ class WebhookProvider:
                 "source": article.get("source", ""),
                 "scraped_at": scraped_at,
             }
-            self._send_webhook(self.config.thread_events_url, payload, "thread-events")
+            self._enqueue_webhook(self.config.thread_events_url, payload, "thread-events")
+
+    def _enqueue_webhook(self, url: str, payload: Dict[str, Any], webhook_name: str) -> None:
+        with self._closed_lock:
+            if self._closed:
+                logger.warning("Webhook outbox is closed; dropping %s event", webhook_name)
+                return
+        self._queue.put((url, payload, webhook_name))
+
+    def _worker_loop(self) -> None:
+        while True:
+            item = self._queue.get()
+            if item is None:
+                self._queue.task_done()
+                return
+
+            url, payload, webhook_name = item
+            try:
+                self._send_webhook(url, payload, webhook_name)
+            except Exception as exc:
+                logger.error("Webhook outbox worker error for %s: %s", webhook_name, exc)
+            finally:
+                self._queue.task_done()
+
+    def flush(self, timeout_seconds: float | None = None) -> bool:
+        if timeout_seconds is None:
+            self._queue.join()
+            return True
+
+        deadline = time.monotonic() + max(0.0, float(timeout_seconds))
+        while time.monotonic() < deadline:
+            if self._queue.unfinished_tasks == 0:
+                return True
+            time.sleep(0.05)
+        return self._queue.unfinished_tasks == 0
+
+    def close(self) -> None:
+        with self._closed_lock:
+            if self._closed:
+                return
+            self._closed = True
+
+        drained = self.flush(timeout_seconds=float(self.config.drain_timeout_seconds))
+        if not drained:
+            logger.warning(
+                "Webhook outbox did not fully drain within %ss",
+                self.config.drain_timeout_seconds,
+            )
+
+        for _ in self._workers:
+            self._queue.put(None)
+        for worker in self._workers:
+            worker.join(timeout=1.0)
 
     def _send_webhook(self, url: str, payload: Dict[str, Any], webhook_name: str) -> bool:
         payload_json = json.dumps(payload, default=str)
@@ -108,3 +172,9 @@ class WebhookProvider:
         if value is None:
             return ""
         return str(value)
+
+    def __del__(self) -> None:
+        try:
+            self.close()
+        except Exception:
+            pass

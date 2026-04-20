@@ -1,11 +1,11 @@
 [Unit]
-Description=Run News Crawler AI every 15 minutes
+Description=Run News Scraper Open every 15 minutes
 
 [Timer]
 OnBootSec=2min
 OnUnitActiveSec=15min
 RandomizedDelaySec=1min
-Unit=news-crawler-ai.service
+Unit=news-scraper-open.service
 Persistent=true
 
 [Install]

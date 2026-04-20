@@ -1,4 +1,4 @@
-"""CLI entry point for News Crawler AI."""
+"""CLI entry point for News Scraper Open."""
 from __future__ import annotations
 
 import logging
@@ -13,7 +13,7 @@ from news_crawler.core.orchestrator import PipelineOrchestrator
 from news_crawler.core.state import StateManager
 from news_crawler.utils.logging import setup_logging
 
-app = typer.Typer(name="news-crawler", help="News Crawler AI - scraping and classification pipeline")
+app = typer.Typer(name="news-scraper", help="News Scraper Open - scraping and enrichment pipeline")
 console = Console()
 
 
@@ -30,7 +30,7 @@ def run(
     setup_logging(level=log_level)
     logger = logging.getLogger(__name__)
 
-    console.print("[bold blue]News-Crawler-AI Pipeline[/bold blue]")
+    console.print("[bold blue]News Scraper Open Pipeline[/bold blue]")
     console.print(f"Dry run: {dry_run}")
     console.print(f"Limit: {limit or 'unlimited'}")
     console.print()
