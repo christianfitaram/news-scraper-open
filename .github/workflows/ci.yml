@@ -25,5 +25,8 @@ jobs:
       - name: Install dependencies
         run: poetry install --no-interaction
 
+      - name: Run lint
+        run: poetry run ruff check news_crawler tests
+
       - name: Run tests
         run: poetry run pytest

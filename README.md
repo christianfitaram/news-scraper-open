@@ -28,6 +28,13 @@ It is designed as a practical application codebase rather than a framework. The 
 - **Webhook retries:** webhook delivery retries transient `429` and `5xx` responses with exponential backoff.
 - **Selenium fallback notes:** Selenium scrapers are optional because browser automation is more fragile than RSS/API extraction; the pipeline keeps independent scrapers isolated so one source failure does not stop the run.
 
+## Design Decisions
+
+- **Provider fallback exists because LLM APIs fail in operationally different ways.** Gemini can hit daily quota, rate limits, or transient client errors; Ollama-backed fallback keeps enrichment available without stopping the ingestion run.
+- **Selenium is optional because browser automation is a last resort.** RSS, API, and static HTML extraction are cheaper and more stable, while Selenium is useful for dynamic sources but isolated behind feature flags.
+- **MongoDB uses `link_pool` to separate deduplication from article storage.** This keeps URL processing state explicit and allows the pipeline to skip already-processed links before doing expensive scraping or LLM work.
+- **`llm_models` is stored for auditability.** Each saved article can show which provider and model handled cleaning, entity extraction, summarization, and classification.
+
 ## Architecture
 
 ```mermaid
@@ -135,6 +142,33 @@ Important variables:
 - `WEBHOOK_URL`
 - `WEBHOOK_URL_THREAD_EVENTS`
 
+### Run Locally With MongoDB
+
+Start MongoDB:
+
+```bash
+docker compose up -d mongodb
+```
+
+Use the default local connection in `.env`:
+
+```bash
+MONGO_URI=mongodb://localhost:27017
+MONGODB_DB=agents
+```
+
+Then run a small dry-run first:
+
+```bash
+news-scraper run --dry-run --limit 5
+```
+
+Run with MongoDB persistence:
+
+```bash
+news-scraper run --limit 5
+```
+
 ### Minimal Local Modes
 
 Dry-run without MongoDB writes:
@@ -235,6 +269,8 @@ Sanitized MongoDB article document:
 - `pipeline_logs`: structured pipeline events
 
 ## Testing
+
+Coverage is currently focused on reliability-critical paths: provider fallback, quota cooldown, entity extraction normalization, Selenium resolution, scraper fallback behavior, state handling, and model metadata persistence.
 
 Run the test suite:
 
