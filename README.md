@@ -63,7 +63,7 @@ Selection behavior:
 
 - If `ENABLE_GENAI=1` and a valid Google API key is present, Gemini is preferred.
 - If a Gemini request fails or quota is exhausted and `ENABLE_OLLAMA=1`, requests fall back to the configured Ollama model sequence.
-- The default fallback order is `gpt-oss:120b-cloud`, `gemma4:31b-cloud`, then `gpt-oss:20b-cloud`.
+- The default fallback order is `gpt-oss:120b-cloud`, `gemma4:31b-cloud`, `gpt-oss:20b-cloud`, then `gemma2:9b`.
 - If both are disabled, the pipeline still runs, but LLM-based cleaning and entity extraction are skipped.
 
 The fallback sequence can be changed with `OLLAMA_FALLBACK_MODELS`.

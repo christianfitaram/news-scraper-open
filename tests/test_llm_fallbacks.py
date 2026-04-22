@@ -37,6 +37,17 @@ def test_ollama_provider_tries_fallback_models_in_order(monkeypatch):
     assert calls == ["gpt-oss:120b-cloud", "gemma4:31b-cloud"]
 
 
+def test_default_gemini_fallback_models_include_final_gemma2(monkeypatch):
+    monkeypatch.delenv("OLLAMA_FALLBACK_MODELS", raising=False)
+
+    assert ollama_provider_module._gemini_fallback_models() == [
+        "gpt-oss:120b-cloud",
+        "gemma4:31b-cloud",
+        "gpt-oss:20b-cloud",
+        "gemma2:9b",
+    ]
+
+
 def test_genai_provider_falls_back_to_ollama_after_quota_error(monkeypatch):
     monkeypatch.setattr(
         genai_provider_module,
